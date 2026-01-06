@@ -27,4 +27,9 @@ public class CardData : ScriptableObject
     [Header("Card Image")]
     public Sprite cardSprite;
 
+    public string DebugName =>
+    $"{(int)month:00}¿ù_{type}" +
+    (isSsangPEE ? "_SSANGPI" : "") +
+    (isGukjin ? "_GUKJIN" : "");
+
 }

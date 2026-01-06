@@ -10,10 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 42ec747b74303184c8aa317f3b9d0ea1, type: 3}
-  m_Name: 01_Gwang
+  m_Name: 2_End
   m_EditorClassIdentifier: 
-  month: 0
-  type: 0
+  month: 2
+  type: 1
+  isBiGwang: 0
   isSsangPEE: 0
+  isHongDan: 0
+  isChungDan: 0
+  isChoDan: 0
+  isGodori: 1
   isGukjin: 0
-  cardSprite: {fileID: 0}
+  cardSprite: {fileID: 21300000, guid: 01b09ef6affc53c42b77740440dbd3c5, type: 3}
