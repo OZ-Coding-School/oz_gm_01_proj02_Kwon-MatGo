@@ -43,6 +43,7 @@ public class DeckManager : Singleton<DeckManager>
         if(drawDeck.Count == 0)
         {
             Debug.LogWarning("[DeckManager] 덱이 비어 드로우 할 수 없음");
+            return null;
         }
         return drawDeck.Pop();
     }

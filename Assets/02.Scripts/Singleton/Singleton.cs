@@ -12,6 +12,8 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 {
     private static T _instance;
 
+    protected virtual bool IsDontDestroyOnLoad => true; //DDOL제어 플래그 : RoundManager씬 이동시 파괴 위함
+
     public static T Instance
     {
         get
