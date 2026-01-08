@@ -4,41 +4,32 @@ using UnityEngine;
 
 public sealed class HumanPlayer : Player
 {
-    private bool isMyTurn;
-
+    //콘솔 테스트용
+    public int SelectIndex { get; private set; } = -1;
     public HumanPlayer(string name) : base(name)
     {
     }
 
-    public override void OnTurnStarted()
+    public void SetSelectIndex(int index)
     {
-        //랜덤 드로우
-        CardData card = DeckManager.Instance.Draw();
-        SetPlayedCard(card);
-
-        Debug.Log($"[{Name}] played {card.name}");
-
-        RoundManager.Instance.CompleteTurn();
+        SelectIndex = index;
     }
 
-    public override void OnTurnEnded()
+    public CardData SelectedCardSubmit()
     {
-        isMyTurn= false;
-        Debug.Log($"[HumanPlayer] {Name} 턴 종료");
+        int index = SelectIndex;
+        SelectIndex = -1;
 
-        //UI 입력 비활성화
-    }
-
-    public void CommitAction()
-    {
-        if(!isMyTurn)
+        if(Hand.Count == 0)
         {
-            return;
+            return null;
         }
 
-        Debug.Log($"[HumanPlayer]{Name} 행동 결정 완료");
+        if(index < 0 || index >= Hand.Count)
+        {
+            return Hand[0];
+        }
 
-        isMyTurn = false;
-        RoundManager.Instance.CompleteTurn();
+        return Hand[index];
     }
 }

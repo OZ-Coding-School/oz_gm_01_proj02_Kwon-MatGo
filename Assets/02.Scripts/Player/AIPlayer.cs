@@ -8,25 +8,12 @@ public sealed class AIPlayer : Player
     {
     }
 
-    public override void OnTurnStarted()
+    public CardData SelectCard()
     {
-        CardData card = DeckManager.Instance.Draw();
-        SetPlayedCard(card);
-
-        Debug.Log($"[{Name}] played {card.name}");
-
-        RoundManager.Instance.CompleteTurn();
-    }
-    public override void OnTurnEnded()
-    {
-        Debug.Log($"[AIPlayer] {Name} 턴 종료");
-    }
-
-    private void ExecuteAIAction()
-    {
-        //판단 로직 설정해야함
-        Debug.Log($"[AIPlayer]{Name} 행동 결정 완료");
-
-        RoundManager.Instance.CompleteTurn();
+        if(Hand.Count == 0)
+        {
+            return null;
+        }
+        return Hand[0];
     }
 }

@@ -21,21 +21,16 @@ public class RoundManager : Singleton<RoundManager>
     protected override bool IsDontDestroyOnLoad => false;
 
     public static event Action<RoundState> OnRoundStateChanged;
-    public static event Action<Player> OnTurnStarted;
-    public static event Action<Player> OnTurnEnded;
-
     public RoundState CurrentState { get; private set; }
 
     private List<CardData> tableCards = new List<CardData>();
 
-    private Player humanPlayer;
-    private Player aiPlayer;
-    private Player currentTurnPlayer;
+    private HumanPlayer humanPlayer;
+    private AIPlayer aiPlayer;
+
 
     private TurnResolver turnResolver;
-    private CaptureResolver captureResolver;
 
-    private bool isTurnCompleted;
     private Coroutine roundRoutine;
 
     protected override void Awake()
@@ -44,9 +39,8 @@ public class RoundManager : Singleton<RoundManager>
 
         humanPlayer = new HumanPlayer("Human");
         aiPlayer = new AIPlayer("AI");
-
         turnResolver = new TurnResolver();
-        captureResolver = new CaptureResolver();
+
     }
 
     public void StartRound()
@@ -64,56 +58,63 @@ public class RoundManager : Singleton<RoundManager>
         yield return null;
 
         ChangeState(RoundState.Distribution);
+        DistributeCards_Log();
         yield return null;
 
         while (true)
         {
-            yield return TurnRoutine(humanPlayer);
-            yield return ResolveRoutine();
-            if(IsRoundEnd())
-            {
-                break;
-            }
-            yield return TurnRoutine(aiPlayer);
-            yield return ResolveRoutine();
-            if (IsRoundEnd())
-            {
-                break;
-            }
-        }
-    }
-
-    private IEnumerator TurnRoutine(Player player)
-    {
-        currentTurnPlayer = player;
-
-        isTurnCompleted = false;
-
-        ChangeState(player is HumanPlayer ? RoundState.PlayerTrun : RoundState.OpponentTrun);
-        OnTurnStarted?.Invoke(player);
-        turnResolver.ExecuteTurn(player);
-
-        while (!isTurnCompleted)
-        {
+            ChangeState(RoundState.PlayerTrun);
+            turnResolver.ExecuteTurn(humanPlayer, tableCards);
             yield return null;
+
+            ChangeState(RoundState.OpponentTrun);
+            turnResolver.ExecuteTurn(aiPlayer, tableCards);
+            yield return null;
+
+            //종료조건 만들어야됨
+        }
+    }
+
+
+    private void DistributeCards_Log()
+    {
+        Debug.Log("===== 초기 준비 시작 =====");
+
+        //덱 초기화
+        DeckManager.Instance.InitializeDeck(shuffle: true);
+
+        tableCards.Clear();
+        humanPlayer.Hand.Clear();
+        aiPlayer.Hand .Clear();
+        humanPlayer.CapturedCards .Clear();
+        aiPlayer .CapturedCards .Clear();
+
+        Debug.Log("바닥 카드 8장 세팅");
+        for(int i = 0; i<8; i++)
+        {
+            var card = DeckManager.Instance.Draw();
+            tableCards.Add(card);
+            Debug.Log($"Table[{i}] : {card.DebugName}");
         }
 
-        OnTurnEnded?.Invoke(player);
-    }
-    
-    public void CompleteTurn()
-    {
-        isTurnCompleted = true;
-    }
+        Debug.Log("플레이어 손 10장");
+        for (int i = 0; i < 10; i++)
+        {
+            var player = DeckManager.Instance.Draw();
+            humanPlayer.Hand.Add(player);
+            Debug.Log($"Player[{i}] : {player.DebugName}");
+        }
 
-    private IEnumerator ResolveRoutine()
-    {
-        ChangeState(RoundState.Resolve);
-        captureResolver.Resolve(currentTurnPlayer, currentTurnPlayer.PlayedCard, tableCards);
-        yield return null;
+        Debug.Log("AI 손 10장");
+        for (int i = 0; i < 10; i++)
+        {
+            var ai = DeckManager.Instance.Draw();
+            aiPlayer.Hand.Add(ai);
+            Debug.Log($"AI[{i}] : {ai.DebugName}");
+        }
+
+        Debug.Log("===== 초기 준비 완료 =====");
     }
-
-
     private void ChangeState(RoundState next)
     {
         CurrentState = next;
@@ -121,10 +122,11 @@ public class RoundManager : Singleton<RoundManager>
         OnRoundStateChanged?.Invoke(next);
     }
 
-    private bool IsRoundEnd()
+    // 숫자 누르면 Human만 선택 인덱스
+    public void SetHumanSelectIndex(int index)
     {
-        // 고 / 스톱 / 종료 조건
-        return false;
+        humanPlayer.SetSelectIndex(index);
+        Debug.Log($"[Human Select] index={index}");
     }
 
 }
