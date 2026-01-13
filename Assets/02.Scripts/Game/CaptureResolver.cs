@@ -27,12 +27,16 @@ public sealed class CaptureResolver
 
         //¸Ô´Â °æ¿ì
         player.AddCapturedCard(playedCard);
-        
-        foreach(var card in sameMonthCards)
+
+        Debug.Log($"[Capture] {player.Name}°¡ {playedCard.DebugName}·Î Ä¸Ã³ ¹ß»ý");
+
+        foreach (var card in sameMonthCards)
         {
             player.AddCapturedCard(card);
             tableCards.Remove(card);
+            Debug.Log($"[Capture] ¡æ ¹Ù´Ú Ä«µå È¹µæ : {card.DebugName}");
         }
+        Debug.Log($"[Capture] ÃÑ {sameMonthCards.Count + 1}Àå È¹µæ");
         return true;
     }
 }

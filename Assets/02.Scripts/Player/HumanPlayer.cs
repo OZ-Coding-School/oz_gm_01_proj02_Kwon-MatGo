@@ -17,17 +17,17 @@ public sealed class HumanPlayer : Player
 
     public CardData SelectedCardSubmit()
     {
+        if (SelectIndex < 0)
+        {
+            return null; 
+        }
+
         int index = SelectIndex;
         SelectIndex = -1;
 
-        if(Hand.Count == 0)
+        if (index >= Hand.Count)
         {
             return null;
-        }
-
-        if(index < 0 || index >= Hand.Count)
-        {
-            return Hand[0];
         }
 
         return Hand[index];

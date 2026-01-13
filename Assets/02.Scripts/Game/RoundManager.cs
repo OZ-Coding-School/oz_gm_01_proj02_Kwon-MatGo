@@ -5,7 +5,6 @@ using UnityEngine;
 
 public enum RoundState
 { 
-    Init,           //라운드 초기화
     Distribution,   //카드분배
     PlayerTrun,     //플레이어 턴 
     OpponentTrun,   //상대 턴
@@ -21,17 +20,26 @@ public class RoundManager : Singleton<RoundManager>
     protected override bool IsDontDestroyOnLoad => false;
 
     public static event Action<RoundState> OnRoundStateChanged;
-    public RoundState CurrentState { get; private set; }
 
     private List<CardData> tableCards = new List<CardData>();
+
+    private ScoreManager humanScore;
+    private ScoreManager aiScore;
+
+    private GoStopManager humanGoStop;
+    private GoStopManager aiGoStop;
 
     private HumanPlayer humanPlayer;
     private AIPlayer aiPlayer;
 
-
     private TurnResolver turnResolver;
 
     private Coroutine roundRoutine;
+
+    //Stop선언 종료 플래그
+    private bool isStoped = false;
+
+    public RoundState CurrentState;
 
     protected override void Awake()
     {
@@ -39,12 +47,21 @@ public class RoundManager : Singleton<RoundManager>
 
         humanPlayer = new HumanPlayer("Human");
         aiPlayer = new AIPlayer("AI");
+
         turnResolver = new TurnResolver();
+
+        humanScore = new ScoreManager();
+        aiScore = new ScoreManager();
+
+        humanGoStop = new GoStopManager();
+        aiGoStop = new GoStopManager();
 
     }
 
     public void StartRound()
     {
+        isStoped = false;
+
         if(roundRoutine != null)
         {
             StopCoroutine(roundRoutine);
@@ -54,72 +71,165 @@ public class RoundManager : Singleton<RoundManager>
 
     private IEnumerator RoundRoutine()
     {
-        ChangeState(RoundState.Init);
-        yield return null;
-
+        //====================Distribution=====================
         ChangeState(RoundState.Distribution);
-        DistributeCards_Log();
-        yield return null;
 
+        DeckManager.Instance.InitializeDeck(true);
+        tableCards.Clear();
+
+        humanPlayer.Hand.Clear();
+        aiPlayer.Hand.Clear();
+
+        for(int i = 0; i < 8; i++)
+        {
+            tableCards.Add(DeckManager.Instance.Draw());
+        }
+        for(int i = 0; i < 10; i++)
+        {
+            humanPlayer.Hand.Add(DeckManager.Instance.Draw());
+            aiPlayer.Hand.Add(DeckManager.Instance.Draw());
+        }
+
+        Debug.Log("===== 카드 분배 완료 =====");
+        Debug.Log($"Human Hand : {humanPlayer.Hand.Count}장");
+        Debug.Log($"AI Hand    : {aiPlayer.Hand.Count}장");
+        Debug.Log($"Table      : {tableCards.Count}장");
+        Debug.Log($"Deck Remain: {DeckManager.Instance.Count}장");
+
+        yield return null;
+        //======================================================
+        //======================Turn Loop=======================
         while (true)
         {
+            //============PlayerTurn============
             ChangeState(RoundState.PlayerTrun);
-            turnResolver.ExecuteTurn(humanPlayer, tableCards);
-            yield return null;
+            humanScore.BeginTurn();
+            
+            while(true)
+            {
+                if(humanPlayer.SelectIndex >=0)
+                {
+                    turnResolver.ExecuteTurn(humanPlayer, tableCards);
+                    break;
+                }
+                yield return null;
+            }
 
+            //점수 업뎃 로그 -> 추후 삭제
+            int before = humanScore.CurrentScore;
+            humanScore.EndTurnAndRecalculate(humanPlayer);
+            Debug.Log($"[Score] Human : {before} → {humanScore.CurrentScore}");
+            
+            humanGoStop.JudgeAfterTurn(humanScore);
+            
+            yield return StartCoroutine(HandleGoStop(humanPlayer, humanScore, humanGoStop));
+            if(CheckRoundEnd())
+            {
+                break;
+            }
+            //==============AITurn==============
             ChangeState(RoundState.OpponentTrun);
+            aiScore.BeginTurn();
             turnResolver.ExecuteTurn(aiPlayer, tableCards);
-            yield return null;
+            
+            //점수 업뎃 로그 -> 추후 삭제
+            int aiBefore = aiScore.CurrentScore;
+            aiScore.EndTurnAndRecalculate(aiPlayer);
+            Debug.Log($"[Score] AI : {aiBefore} → {aiScore.CurrentScore}");
+            
+            aiGoStop.JudgeAfterTurn(aiScore);
 
-            //종료조건 만들어야됨
+            yield return StartCoroutine(HandleGoStop(aiPlayer, aiScore, aiGoStop));
+            if(CheckRoundEnd())
+            {
+                break;
+            }
+
+            yield return null;   
         }
+        //======================================================
+        //=========================End==========================
+        ChangeState(RoundState.End);
+
+        humanGoStop.Reset();
+        aiGoStop.Reset();
+
+        Debug.Log("========== Round End ==========");
     }
 
-
-    private void DistributeCards_Log()
+    private IEnumerator HandleGoStop(Player player, ScoreManager score, GoStopManager goStop)
     {
-        Debug.Log("===== 초기 준비 시작 =====");
+        ChangeState(RoundState.GoStop);
 
-        //덱 초기화
-        DeckManager.Instance.InitializeDeck(shuffle: true);
-
-        tableCards.Clear();
-        humanPlayer.Hand.Clear();
-        aiPlayer.Hand .Clear();
-        humanPlayer.CapturedCards .Clear();
-        aiPlayer .CapturedCards .Clear();
-
-        Debug.Log("바닥 카드 8장 세팅");
-        for(int i = 0; i<8; i++)
+        if(!goStop.CanGo(score) && !goStop.CanStop(score))
         {
-            var card = DeckManager.Instance.Draw();
-            tableCards.Add(card);
-            Debug.Log($"Table[{i}] : {card.DebugName}");
+            yield break;
         }
 
-        Debug.Log("플레이어 손 10장");
-        for (int i = 0; i < 10; i++)
-        {
-            var player = DeckManager.Instance.Draw();
-            humanPlayer.Hand.Add(player);
-            Debug.Log($"Player[{i}] : {player.DebugName}");
-        }
+        //GoStop선택 로그 -> 추후 삭제
+        Debug.Log($"[GoStop] {player.Name} 현재 점수 = {score.CurrentScore}");
+        Debug.Log("[GoStop] 선택 대기중... (G = Go / S = Stop)");
+        
+        bool decided = false;
 
-        Debug.Log("AI 손 10장");
-        for (int i = 0; i < 10; i++)
+        while(!decided)
         {
-            var ai = DeckManager.Instance.Draw();
-            aiPlayer.Hand.Add(ai);
-            Debug.Log($"AI[{i}] : {ai.DebugName}");
-        }
+            if(player is HumanPlayer)
+            {
+                if(Input.GetKeyDown(KeyCode.G) && goStop.CanGo(score))
+                {
+                    Debug.Log("[Input] Human pressed G");
+                    goStop.LetsGo(score);
+                    Debug.Log("[Game] Go 선택 → 게임 계속");
+                    decided = true;
+                }
+                else if(Input.GetKeyDown(KeyCode.S) && goStop.LetsStop(score))
+                {
+                    Debug.Log("[Input] Human pressed S");
+                    Debug.Log("[Game] Stop 선택 → 라운드 종료");
+                    isStoped = true;
+                    decided = true;
+                }
+            }
+            else
+            {
+                if(goStop.CanStop(score))
+                {
+                    Debug.Log("[AI] Stop 선택");
+                    isStoped = true;
+                }
+                else
+                {
+                    Debug.Log("[AI] Go 선택");
+                    goStop.LetsGo(score);
+                }
+                decided = true;
+            }
 
-        Debug.Log("===== 초기 준비 완료 =====");
+            yield return null;
+        }
     }
+
+    private bool CheckRoundEnd()
+    {
+        if(DeckManager.Instance.IsEmpty())
+        {
+            Debug.Log("덱 소진. 라운드 종료");
+            return true;
+        }
+        if(isStoped)
+        {
+            Debug.Log("Stop 선언. 라운드 종료");
+            return true;
+        }
+
+        return false;
+    }
+
     private void ChangeState(RoundState next)
     {
         CurrentState = next;
         Debug.Log($"[RoundManager] State -> {next}");
-        OnRoundStateChanged?.Invoke(next);
     }
 
     // 숫자 누르면 Human만 선택 인덱스

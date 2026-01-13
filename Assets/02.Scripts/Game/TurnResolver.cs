@@ -27,9 +27,9 @@ public sealed class TurnResolver
         //손에서 카드 선택
         CardData selected = SelectCard(player);
 
-        if(selected == null)
+        if(player is HumanPlayer && selected == null)
         {
-            Debug.LogWarning($"[TurnResolver] {player.Name} 선택할 카드가 없습니다.");
+            Debug.LogWarning($"[TurnResolver] {player.Name} 입력 대기중.");
             return;
         }
 
