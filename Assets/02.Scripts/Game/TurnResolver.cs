@@ -38,10 +38,8 @@ public sealed class TurnResolver
         Debug.Log($"[Play] {player.Name} -> {selected.DebugName}");
 
         //바닥과 손에서 낸 카드 판정
-        if(captureResolver.Resolve(player, selected, tableCards))
-        {
-            capturedThisTurn = true;
-        }
+        captureResolver.Resolve(player, selected, tableCards);
+
         player.ClearPlayedCard();
 
         //덱에서 카드 1장 드로우
@@ -55,18 +53,7 @@ public sealed class TurnResolver
         Debug.Log($"[Draw] {player.Name}이 드로우 -> {draw.DebugName}");
 
         //바닥과 드로우 카드 판정
-        if(captureResolver.Resolve(player, draw, tableCards))
-        {
-            capturedThisTurn = true;
-        }
-
-        //점수계산, UI갱신
-        if (capturedThisTurn)
-        {
-            Debug.Log($"[Score/UI] {player.Name} 점수계산 + UI업데이트");
-            // ScoreCalculator.Calculate(player);
-            // UI.UpdateScore(player);
-        }
+        captureResolver.Resolve(player, draw, tableCards);
 
         Debug.Log($"----- 턴 종료 : {player.Name} -----");
     }

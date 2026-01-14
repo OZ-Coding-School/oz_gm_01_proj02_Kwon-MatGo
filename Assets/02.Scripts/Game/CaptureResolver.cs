@@ -2,16 +2,24 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public struct CaptureResult
+{
+    public bool captured;
+    public List<CardData> capturedCards;
+
+    public static CaptureResult None => new CaptureResult { captured = false, capturedCards = null };
+}
+
+
 public sealed class CaptureResolver
 {
-    public bool Resolve(Player player,
+    public CaptureResult Resolve(Player player,
         CardData playedCard, // ³½ Ä«µå
         List<CardData> tableCards) // ¹Ù´Ú Ä«µå
     {
         if(player == null || playedCard == null || tableCards == null)
         {
-            Debug.LogError("[CaptureResolver] ¿À·ù ¹ß»ý È®ÀÎ ¿ä¸Á");
-            return false;
+            return CaptureResult.None;
         }
 
         //°°Àº ¿ù Ä«µå Ã£±â
@@ -21,22 +29,25 @@ public sealed class CaptureResolver
         if(sameMonthCards.Count == 0)
         {
             tableCards.Add(playedCard);
-            Debug.Log($"[Capture] ¸Â´Â Ä«µå°¡ ¾øÀ½. {playedCard.name} ¹Ù´Ú¿¡ ³õÀ½");
-            return false;
+            return CaptureResult.None;
         }
 
         //¸Ô´Â °æ¿ì
-        player.AddCapturedCard(playedCard);
+        var capturedList = new List<CardData>();
 
-        Debug.Log($"[Capture] {player.Name}°¡ {playedCard.DebugName}·Î Ä¸Ã³ ¹ß»ý");
+        player.AddCapturedCard(playedCard);
+        capturedList.Add(playedCard);
 
         foreach (var card in sameMonthCards)
         {
             player.AddCapturedCard(card);
+            capturedList.Add(card);
             tableCards.Remove(card);
-            Debug.Log($"[Capture] ¡æ ¹Ù´Ú Ä«µå È¹µæ : {card.DebugName}");
         }
-        Debug.Log($"[Capture] ÃÑ {sameMonthCards.Count + 1}Àå È¹µæ");
-        return true;
+        return new CaptureResult
+        {
+            captured = true,
+            capturedCards = capturedList
+        };
     }
 }

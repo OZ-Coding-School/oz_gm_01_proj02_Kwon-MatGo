@@ -95,6 +95,8 @@ public class RoundManager : Singleton<RoundManager>
         Debug.Log($"AI Hand    : {aiPlayer.Hand.Count}장");
         Debug.Log($"Table      : {tableCards.Count}장");
         Debug.Log($"Deck Remain: {DeckManager.Instance.Count}장");
+        
+        ShowDistributionViews();
 
         yield return null;
         //======================================================
@@ -115,6 +117,9 @@ public class RoundManager : Singleton<RoundManager>
                 yield return null;
             }
 
+            RefreshHandAndTableView();
+            RefreshCapturedView();
+
             //점수 업뎃 로그 -> 추후 삭제
             int before = humanScore.CurrentScore;
             humanScore.EndTurnAndRecalculate(humanPlayer);
@@ -131,7 +136,10 @@ public class RoundManager : Singleton<RoundManager>
             ChangeState(RoundState.OpponentTrun);
             aiScore.BeginTurn();
             turnResolver.ExecuteTurn(aiPlayer, tableCards);
-            
+
+            RefreshHandAndTableView();
+            RefreshCapturedView();
+
             //점수 업뎃 로그 -> 추후 삭제
             int aiBefore = aiScore.CurrentScore;
             aiScore.EndTurnAndRecalculate(aiPlayer);
@@ -239,4 +247,85 @@ public class RoundManager : Singleton<RoundManager>
         Debug.Log($"[Human Select] index={index}");
     }
 
+    //카드 시각화 메서드
+    private void ShowDistributionViews()
+    {
+        CardViewManager.Instance.ClearArea(CardAreaType.HumanHandCard);
+        CardViewManager.Instance.ClearArea(CardAreaType.AIHandCard);
+        CardViewManager.Instance.ClearArea(CardAreaType.TableCard);
+
+        foreach(var card in tableCards)
+        {
+            CardViewManager.Instance.CreateCard(card, CardAreaType.TableCard, true);
+        }
+
+        foreach (var card in humanPlayer.Hand)
+        {
+            CardViewManager.Instance.CreateCard(
+                card,
+                CardAreaType.HumanHandCard,
+                true
+            );
+        }
+
+        foreach (var card in aiPlayer.Hand)
+        {
+            CardViewManager.Instance.CreateCard(
+                card,
+                CardAreaType.AIHandCard,
+                false
+            );
+        }
+    }
+
+    //손패/테이블 갱신 메서드
+    private void RefreshHandAndTableView()
+    {
+        //HumanHand
+        CardViewManager.Instance.ClearArea(CardAreaType.HumanHandCard);
+        foreach(var card in humanPlayer.Hand)
+        {
+            CardViewManager.Instance.CreateCard(card, CardAreaType.HumanHandCard, true);
+        }
+
+        //AIHand
+        CardViewManager.Instance.ClearArea(CardAreaType.AIHandCard);
+        foreach(var card in aiPlayer.Hand)
+        {
+            CardViewManager.Instance.CreateCard(card, CardAreaType.AIHandCard, false);
+        }
+
+        //Table
+        CardViewManager.Instance.ClearArea(CardAreaType.TableCard);
+        foreach(var card in tableCards)
+        {
+            CardViewManager.Instance.CreateCard(card, CardAreaType.TableCard, true);
+        }
+    }
+
+    //먹은 카드 갱신 메서드
+    private void RefreshCapturedView()
+    {
+        // 내 캡처
+        CardViewManager.Instance.ClearArea(CardAreaType.HumanCapturedCard);
+        foreach (var card in humanPlayer.CapturedCards)
+        {
+            CardViewManager.Instance.CreateCard(
+                card,
+                CardAreaType.HumanCapturedCard,
+                true
+            );
+        }
+
+        // 상대 캡처
+        CardViewManager.Instance.ClearArea(CardAreaType.AICapturedCard);
+        foreach (var card in aiPlayer.CapturedCards)
+        {
+            CardViewManager.Instance.CreateCard(
+                card,
+                CardAreaType.AICapturedCard,
+                true
+            );
+        }
+    }
 }
