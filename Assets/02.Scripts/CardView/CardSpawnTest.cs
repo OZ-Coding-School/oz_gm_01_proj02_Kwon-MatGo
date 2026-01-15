@@ -9,7 +9,7 @@ public class CardSpawnTest : MonoBehaviour
     void Start()
     {
         // 내 손패에 카드 1장 생성
-        CardViewManager.Instance.CreateCard(
+        CardViewManager.Instance.GetCard(
             testCard,
             CardAreaType.HumanHandCard,
             true

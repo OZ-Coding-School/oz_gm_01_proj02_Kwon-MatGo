@@ -20,6 +20,9 @@ public class CardViewManager : MonoBehaviour
 
     [SerializeField] private CardView cardViewPrefab;
 
+    private Dictionary<CardAreaType, ObjectPooling<CardView>> pools
+    = new Dictionary<CardAreaType, ObjectPooling<CardView>>();
+
     [SerializeField] private Transform AIHandCardArea;      //상대 손
     [SerializeField] private Transform AICapturedCardArea;  //상대 먹은
     [SerializeField] private Transform DeckArea;            //덱
@@ -29,42 +32,37 @@ public class CardViewManager : MonoBehaviour
 
     private void Awake()
     {
-        if(Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
         Instance = this;
+
+        pools[CardAreaType.HumanHandCard] =
+       new ObjectPooling<CardView>(cardViewPrefab, HumanHandCardArea, preload: 10);
+
+        pools[CardAreaType.AIHandCard] =
+            new ObjectPooling<CardView>(cardViewPrefab, AIHandCardArea, preload: 10);
+
+        pools[CardAreaType.TableCard] =
+            new ObjectPooling<CardView>(cardViewPrefab, TableCardArea, preload: 12);
+
+        pools[CardAreaType.HumanCapturedCard] =
+            new ObjectPooling<CardView>(cardViewPrefab, HumanCapturedCardArea, preload: 20);
+
+        pools[CardAreaType.AICapturedCard] =
+            new ObjectPooling<CardView>(cardViewPrefab, AICapturedCardArea, preload: 20);
     }
 
-    public CardView CreateCard(CardData data, CardAreaType area, bool front)
+    public CardView GetCard(CardData data, CardAreaType area, bool front)
     {
-        Transform parent = GetParent(area);
-        if(parent == null)
-        {
-            Debug.LogError($"[CardViewManager] 부모가 null임");
-            return null;
-        }
-
-        CardView view = Instantiate(cardViewPrefab, parent);
+        var view = pools[area].Get();
+        var parent = GetAreaTransform(area);
+        view.transform.SetParent(parent, worldPositionStays: false);
+        view.transform.SetAsLastSibling(); 
         view.Init(data, front);
-
-        return view;
+        return view; ;
     }
 
     public void ClearArea(CardAreaType area)
     {
-        Transform parent = GetParent(area);
-        if(parent == null)
-        {
-            return;
-        }
-
-        for(int i = parent.childCount -1; i>=0; i--)
-        {
-            Destroy(parent.GetChild(i).gameObject);
-        }
+        pools[area].ReleaseAll();
     }
 
     private Transform GetParent(CardAreaType area)
@@ -86,5 +84,10 @@ public class CardViewManager : MonoBehaviour
             default:
                 return null;
         }
+    }
+
+    public Transform GetAreaTransform(CardAreaType area)
+    {
+        return GetParent(area);
     }
 }

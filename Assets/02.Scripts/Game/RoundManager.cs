@@ -35,6 +35,7 @@ public class RoundManager : Singleton<RoundManager>
     private TurnResolver turnResolver;
 
     private Coroutine roundRoutine;
+    private Coroutine arrangeRoutine;
 
     //Stop선언 종료 플래그
     private bool isStoped = false;
@@ -97,8 +98,7 @@ public class RoundManager : Singleton<RoundManager>
         Debug.Log($"Deck Remain: {DeckManager.Instance.Count}장");
         
         ShowDistributionViews();
-
-        yield return null;
+        RequestArrangeHands();
         //======================================================
         //======================Turn Loop=======================
         while (true)
@@ -256,25 +256,20 @@ public class RoundManager : Singleton<RoundManager>
 
         foreach(var card in tableCards)
         {
-            CardViewManager.Instance.CreateCard(card, CardAreaType.TableCard, true);
+           var v = CardViewManager.Instance.GetCard(card, CardAreaType.TableCard, true);
+            v.BindHandIndex(-1, clickable: false);
         }
 
-        foreach (var card in humanPlayer.Hand)
+        for(int i = 0; i<humanPlayer.Hand.Count; i++)
         {
-            CardViewManager.Instance.CreateCard(
-                card,
-                CardAreaType.HumanHandCard,
-                true
-            );
+            var v = CardViewManager.Instance.GetCard(humanPlayer.Hand[i], CardAreaType.HumanHandCard, true);
+            v.BindHandIndex(i, clickable: true);
         }
 
-        foreach (var card in aiPlayer.Hand)
+        for (int i = 0; i < aiPlayer.Hand.Count; i++)
         {
-            CardViewManager.Instance.CreateCard(
-                card,
-                CardAreaType.AIHandCard,
-                false
-            );
+            var v = CardViewManager.Instance.GetCard(aiPlayer.Hand[i], CardAreaType.AIHandCard, false);
+            v.BindHandIndex(-1, clickable: false);
         }
     }
 
@@ -283,24 +278,41 @@ public class RoundManager : Singleton<RoundManager>
     {
         //HumanHand
         CardViewManager.Instance.ClearArea(CardAreaType.HumanHandCard);
-        foreach(var card in humanPlayer.Hand)
+
+        for (int i = 0; i < humanPlayer.Hand.Count; i++)
         {
-            CardViewManager.Instance.CreateCard(card, CardAreaType.HumanHandCard, true);
+            var view = CardViewManager.Instance.GetCard(
+                humanPlayer.Hand[i],
+                CardAreaType.HumanHandCard,
+                true
+            );
+            view.BindHandIndex(i, true);
         }
 
         //AIHand
         CardViewManager.Instance.ClearArea(CardAreaType.AIHandCard);
-        foreach(var card in aiPlayer.Hand)
+        List<Transform> aiHandCards = new List<Transform>();
+
+        for (int i = 0; i < aiPlayer.Hand.Count; i++)
         {
-            CardViewManager.Instance.CreateCard(card, CardAreaType.AIHandCard, false);
+            var view = CardViewManager.Instance.GetCard(
+                aiPlayer.Hand[i],
+                CardAreaType.AIHandCard,
+                false
+            );
+
+            view.BindHandIndex(-1, clickable: false);
         }
 
         //Table
         CardViewManager.Instance.ClearArea(CardAreaType.TableCard);
         foreach(var card in tableCards)
         {
-            CardViewManager.Instance.CreateCard(card, CardAreaType.TableCard, true);
+            var v = CardViewManager.Instance.GetCard(card, CardAreaType.TableCard, true);
+            v.BindHandIndex(-1, clickable: false);
         }
+
+        RequestArrangeHands();
     }
 
     //먹은 카드 갱신 메서드
@@ -310,7 +322,7 @@ public class RoundManager : Singleton<RoundManager>
         CardViewManager.Instance.ClearArea(CardAreaType.HumanCapturedCard);
         foreach (var card in humanPlayer.CapturedCards)
         {
-            CardViewManager.Instance.CreateCard(
+            CardViewManager.Instance.GetCard(
                 card,
                 CardAreaType.HumanCapturedCard,
                 true
@@ -321,11 +333,64 @@ public class RoundManager : Singleton<RoundManager>
         CardViewManager.Instance.ClearArea(CardAreaType.AICapturedCard);
         foreach (var card in aiPlayer.CapturedCards)
         {
-            CardViewManager.Instance.CreateCard(
+            CardViewManager.Instance.GetCard(
                 card,
                 CardAreaType.AICapturedCard,
                 true
             );
         }
+    }
+
+    private void ArrangeHands()
+    {
+        ArrangeHandArea(CardAreaType.HumanHandCard);
+        ArrangeHandArea(CardAreaType.AIHandCard);
+    }
+
+    private void ArrangeHandArea(CardAreaType areaType)
+    {
+        var area = CardViewManager.Instance.GetAreaTransform(areaType);
+        if (area == null) return;
+
+        var layout = area.GetComponent<HandFanLayOut>();
+        if (layout == null)
+        {
+            Debug.LogWarning($"[{nameof(RoundManager)}] {areaType}에 HandFanLayout이 없습니다.");
+            return;
+        }
+
+        List<Transform> cards = new List<Transform>(area.childCount);
+        for (int i = 0; i < area.childCount; i++)
+        {
+            var child = area.GetChild(i);
+            if(!child.gameObject.activeSelf)
+            {
+                continue;
+            }
+            cards.Add(child);
+        }
+            
+
+        layout.Arrange(cards);
+    }
+
+    private void RequestArrangeHands()
+    {
+        if (arrangeRoutine != null)
+            StopCoroutine(arrangeRoutine);
+
+        arrangeRoutine = StartCoroutine(CoArrangeHandsNextFrame());
+    }
+
+    private IEnumerator CoArrangeHandsNextFrame()
+    {
+        // 1프레임 대기: UI 레이아웃 / Destroy 정리 / Instantiate 반영
+        yield return null;
+
+        // (옵션) 강제 레이아웃 갱신
+        Canvas.ForceUpdateCanvases();
+
+        ArrangeHands();
+        arrangeRoutine = null;
     }
 }
