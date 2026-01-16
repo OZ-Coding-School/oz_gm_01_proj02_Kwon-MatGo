@@ -6,8 +6,8 @@ using UnityEngine;
 public enum RoundState
 { 
     Distribution,   //카드분배
-    PlayerTrun,     //플레이어 턴 
-    OpponentTrun,   //상대 턴
+    PlayerTurn,     //플레이어 턴 
+    OpponentTurn,   //상대 턴
     Resolve,        //판정
     GoStop,         //고스톱 선택
     Settlement,     //정산
@@ -104,7 +104,7 @@ public class RoundManager : Singleton<RoundManager>
         while (true)
         {
             //============PlayerTurn============
-            ChangeState(RoundState.PlayerTrun);
+            ChangeState(RoundState.PlayerTurn);
             humanScore.BeginTurn();
             
             while(true)
@@ -118,7 +118,6 @@ public class RoundManager : Singleton<RoundManager>
             }
 
             RefreshHandAndTableView();
-            RefreshCapturedView();
 
             //점수 업뎃 로그 -> 추후 삭제
             int before = humanScore.CurrentScore;
@@ -133,12 +132,11 @@ public class RoundManager : Singleton<RoundManager>
                 break;
             }
             //==============AITurn==============
-            ChangeState(RoundState.OpponentTrun);
+            ChangeState(RoundState.OpponentTurn);
             aiScore.BeginTurn();
             turnResolver.ExecuteTurn(aiPlayer, tableCards);
 
             RefreshHandAndTableView();
-            RefreshCapturedView();
 
             //점수 업뎃 로그 -> 추후 삭제
             int aiBefore = aiScore.CurrentScore;
@@ -313,32 +311,6 @@ public class RoundManager : Singleton<RoundManager>
         }
 
         RequestArrangeHands();
-    }
-
-    //먹은 카드 갱신 메서드
-    private void RefreshCapturedView()
-    {
-        // 내 캡처
-        CardViewManager.Instance.ClearArea(CardAreaType.HumanCapturedCard);
-        foreach (var card in humanPlayer.CapturedCards)
-        {
-            CardViewManager.Instance.GetCard(
-                card,
-                CardAreaType.HumanCapturedCard,
-                true
-            );
-        }
-
-        // 상대 캡처
-        CardViewManager.Instance.ClearArea(CardAreaType.AICapturedCard);
-        foreach (var card in aiPlayer.CapturedCards)
-        {
-            CardViewManager.Instance.GetCard(
-                card,
-                CardAreaType.AICapturedCard,
-                true
-            );
-        }
     }
 
     private void ArrangeHands()

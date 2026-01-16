@@ -54,9 +54,11 @@ public class CardViewManager : MonoBehaviour
     {
         var view = pools[area].Get();
         var parent = GetAreaTransform(area);
+
         view.transform.SetParent(parent, worldPositionStays: false);
         view.transform.SetAsLastSibling(); 
-        view.Init(data, front);
+
+        view.Init(data, front,area);
         return view; ;
     }
 

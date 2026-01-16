@@ -44,6 +44,7 @@ public sealed class CaptureResolver
             capturedList.Add(card);
             tableCards.Remove(card);
         }
+        CapturedCardManager.Instance.RefreshCaptured(player);
         return new CaptureResult
         {
             captured = true,

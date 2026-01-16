@@ -21,4 +21,4 @@ MonoBehaviour:
   isChoDan: 0
   isGodori: 0
   isGukjin: 0
-  cardSprite: {fileID: 21300000, guid: a7694358eb7c8994d8f8f24dc43e5285, type: 3}
+  cardSprite: {fileID: 21300000, guid: 5bc15e7a89e1463439326036d09b2034, type: 3}

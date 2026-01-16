@@ -10,7 +10,7 @@ public class CardTest : MonoBehaviour
     void Start()
     {
         CardView cv = Instantiate(cardViewPrefab, transform);
-        cv.Init(testCard, front: true);
+        //cv.Init(testCard, front: true);
 
         // 1초 뒤 뒷면 테스트
         Invoke(nameof(Flip), 1f);
